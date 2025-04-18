@@ -1,0 +1,170 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    min-height: 100vh;
+  }
+
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  main {
+    flex: 1;
+  }
+  
+  /* Only apply overflow hidden to authenticated pages */
+  .auth-layout {
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  .auth-layout main {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+}
+
+/* Tooltip styles for schedules */
+.has-tooltip {
+  position: relative;
+}
+
+.has-tooltip .tooltip {
+  visibility: hidden;
+  position: absolute;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.has-tooltip:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Conflict visualization styles */
+.conflict-error {
+  position: relative;
+  box-shadow: 0 0 0 2px theme('colors.red.500');
+}
+
+.conflict-error::after {
+  content: "!";
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+  background-color: theme('colors.red.500');
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.conflict-warning {
+  position: relative;
+  box-shadow: 0 0 0 2px theme('colors.amber.400');
+}
+
+.conflict-warning::after {
+  content: "!";
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+  background-color: theme('colors.amber.400');
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* Pulse animation for conflicts */
+@keyframes pulse-red {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+  }
+}
+
+@keyframes pulse-amber {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.2);
+  }
+}
+
+.conflict-error-pulse {
+  animation: pulse-red 2s infinite;
+}
+
+.conflict-warning-pulse {
+  animation: pulse-amber 2s infinite;
+}
+
+/* Dialog improvements */
+.dialog-scrollable {
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+/* Schedule cell hover effects */
+.schedule-cell {
+  transition: transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.schedule-cell:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+}
+
+/* Custom scrollbar for better UX */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Responsive table improvements */
+@media (max-width: 768px) {
+  .responsive-table-wrapper {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
