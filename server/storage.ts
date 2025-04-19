@@ -141,22 +141,22 @@ export class MemStorage implements IStorage {
     const dayShift = await this.createShiftType({ 
       name: "Day Shift", 
       startTime: "07:00", 
-      endTime: "15:00", 
-      duration: 8 
+      endTime: "19:00", 
+      duration: 12 
     });
     
-    const eveningShift = await this.createShiftType({ 
-      name: "Evening Shift", 
-      startTime: "15:00", 
-      endTime: "23:00", 
-      duration: 8 
+    const midShift = await this.createShiftType({ 
+      name: "Mid Shift", 
+      startTime: "07:00", 
+      endTime: "12:00", 
+      duration: 5 
     });
     
     const nightShift = await this.createShiftType({ 
       name: "Night Shift", 
-      startTime: "23:00", 
+      startTime: "19:00", 
       endTime: "07:00", 
-      duration: 8 
+      duration: 12 
     });
   }
   
