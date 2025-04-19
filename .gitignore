@@ -2,6 +2,7 @@ env/*
 .ipynb_checkpoints/*
 *.pdf
 *.csv
+*env
 env*.sh
 __pycache__*
 */node_modules
