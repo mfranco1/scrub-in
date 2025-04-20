@@ -208,44 +208,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/schedule/:id", async (req, res) => {
+  // Clear schedules for a date range (Moved Before /:id)
+  app.delete("/api/schedule/clear", async (req, res) => {
+    const dateRangeSchema = z.object({
+      startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid start date format (YYYY-MM-DD)"),
+      endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid end date format (YYYY-MM-DD)"),
+    });
+
     try {
-      const scheduleId = parseInt(req.params.id);
-      const scheduleData = insertScheduleSchema.partial().parse(req.body);
+      const { startDate, endDate } = dateRangeSchema.parse(req.query);
       
-      // Get the existing schedule for change history
-      const existingSchedule = await storage.getSchedule(scheduleId);
-      if (!existingSchedule) {
-        return res.status(404).json({ error: "Schedule not found" });
-      }
+      const deletedCount = await storage.deleteSchedulesByDateRange(startDate, endDate);
       
-      // Create change history if shift type is being updated
-      if (scheduleData.shiftTypeId && scheduleData.shiftTypeId !== existingSchedule.shiftTypeId) {
-        await storage.createChangeHistory({
-          scheduleId,
-          staffId: existingSchedule.staffId,
-          date: existingSchedule.date,
-          oldShiftTypeId: existingSchedule.shiftTypeId || null,
-          newShiftTypeId: scheduleData.shiftTypeId,
-          reason: req.body.reason || "Schedule updated",
-          changedByStaffId: req.user ? (await storage.getStaffByUserId(req.user.id))?.id || 1 : 1
-        });
-      }
-      
-      const updatedSchedule = await storage.updateSchedule(scheduleId, scheduleData);
-      if (!updatedSchedule) {
-        return res.status(404).json({ error: "Schedule not found" });
-      }
-      
-      res.json(updatedSchedule);
+      console.log(`Cleared ${deletedCount} schedules between ${startDate} and ${endDate}`);
+      res.status(204).send(); // Success, no content to return
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: error.errors });
+        return res.status(400).json({ error: "Invalid date range query parameters", details: error.errors });
       }
-      res.status(500).json({ error: "Failed to update schedule" });
+      console.error("Error clearing schedules:", error);
+      res.status(500).json({ error: "Failed to clear schedules" });
     }
   });
-
+  
   app.delete("/api/schedule/:id", async (req, res) => {
     try {
       const scheduleId = parseInt(req.params.id);
@@ -293,30 +278,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: error.errors });
       }
       res.status(500).json({ error: "Failed to create schedules batch" });
-    }
-  });
-
-  // Clear schedules for a date range
-  app.delete("/api/schedule/clear", async (req, res) => {
-    const dateRangeSchema = z.object({
-      startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid start date format (YYYY-MM-DD)"),
-      endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid end date format (YYYY-MM-DD)"),
-    });
-
-    try {
-      const { startDate, endDate } = dateRangeSchema.parse(req.query);
-      
-      // Assuming storage.deleteSchedulesByDateRange returns the count of deleted items or throws
-      const deletedCount = await storage.deleteSchedulesByDateRange(startDate, endDate);
-      
-      console.log(`Cleared ${deletedCount} schedules between ${startDate} and ${endDate}`);
-      res.status(204).send(); // Success, no content to return
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid date range query parameters", details: error.errors });
-      }
-      console.error("Error clearing schedules:", error);
-      res.status(500).json({ error: "Failed to clear schedules" });
     }
   });
 
