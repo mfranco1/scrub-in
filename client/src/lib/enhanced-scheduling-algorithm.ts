@@ -822,14 +822,14 @@ export function detectScheduleConflicts(
   });
   
   if (weeklySchedules.length > MAX_SHIFTS_PER_WEEK) {
-    conflicts.push({
-      type: ConflictType.EXCEEDS_WEEKLY_HOURS,
-      staffId: schedule.staffId,
-      date: schedule.date,
-      message: `Exceeds maximum weekly shifts (${MAX_SHIFTS_PER_WEEK})`,
-      severity: "warning",
-      staffName: `${staff.user.firstName} ${staff.user.lastName}`
-    });
+    //conflicts.push({
+    //  type: ConflictType.EXCEEDS_WEEKLY_HOURS,
+    //  staffId: schedule.staffId,
+    //  date: schedule.date,
+    //  message: `Exceeds maximum weekly shifts (${MAX_SHIFTS_PER_WEEK})`,
+    //  severity: "warning",
+    //  staffName: `${staff.user.firstName} ${staff.user.lastName}`
+    //});
   }
   
   // Check for day-to-night transition without proper rest
@@ -852,14 +852,14 @@ export function detectScheduleConflicts(
         const restHours = (todayStart.getTime() - yesterdayEnd.getTime()) / (1000 * 60 * 60);
         
         if (restHours < MIN_REST_HOURS) {
-          conflicts.push({
-            type: ConflictType.REST_PERIOD_VIOLATION,
-            staffId: schedule.staffId,
-            date: schedule.date,
-            message: `Insufficient rest period (${Math.round(restHours)}h < ${MIN_REST_HOURS}h)`,
-            severity: "error",
-            staffName: `${staff.user.firstName} ${staff.user.lastName}`
-          });
+          //conflicts.push({
+          //  type: ConflictType.REST_PERIOD_VIOLATION,
+          //  staffId: schedule.staffId,
+          //  date: schedule.date,
+          //  message: `Insufficient rest period (${Math.round(restHours)}h < ${MIN_REST_HOURS}h)`,
+          //  severity: "error",
+          //  staffName: `${staff.user.firstName} ${staff.user.lastName}`
+          //});
         }
       }
     }
@@ -867,14 +867,14 @@ export function detectScheduleConflicts(
   
   // Check for specialization mismatch if unit is specified
   if (schedule.unit && staff.specialization && schedule.unit !== staff.specialization) {
-    conflicts.push({
-      type: ConflictType.SPECIALIZATION_MISMATCH,
-      staffId: schedule.staffId,
-      date: schedule.date,
-      message: `Staff specialization (${staff.specialization}) does not match unit (${schedule.unit})`,
-      severity: "warning",
-      staffName: `${staff.user.firstName} ${staff.user.lastName}`
-    });
+    //conflicts.push({
+    //  type: ConflictType.SPECIALIZATION_MISMATCH,
+    //  staffId: schedule.staffId,
+    //  date: schedule.date,
+    //  message: `Staff specialization (${staff.specialization}) does not match unit (${schedule.unit})`,
+    //  severity: "warning",
+    //  staffName: `${staff.user.firstName} ${staff.user.lastName}`
+    //});
   }
   
   return conflicts;

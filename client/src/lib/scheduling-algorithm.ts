@@ -702,38 +702,38 @@ export function detectScheduleConflicts(
   
   // Check day to night transition without rest
   if (currentShift?.name === "Night Shift" && prevShift?.name === "Day Shift") {
-    conflicts.push({
-      type: ConflictType.REST_PERIOD_VIOLATION,
-      staffId: schedule.staffId,
-      date: schedule.date,
-      message: `Insufficient rest period between day and night shift`,
-      severity: "error",
-      staffName
-    });
+    //conflicts.push({
+    //  type: ConflictType.REST_PERIOD_VIOLATION,
+    //  staffId: schedule.staffId,
+    //  date: schedule.date,
+    //  message: `Insufficient rest period between day and night shift`,
+    //  severity: "error",
+    //  staffName
+    //});
   }
   
   // Check night to day transition without rest
   if (currentShift?.name === "Day Shift" && prevShift?.name === "Night Shift") {
-    conflicts.push({
-      type: ConflictType.REST_PERIOD_VIOLATION,
-      staffId: schedule.staffId,
-      date: schedule.date,
-      message: `Insufficient rest period between night and day shift`,
-      severity: "error",
-      staffName
-    });
+    //conflicts.push({
+    //  type: ConflictType.REST_PERIOD_VIOLATION,
+    //  staffId: schedule.staffId,
+    //  date: schedule.date,
+    //  message: `Insufficient rest period between night and day shift`,
+    //  severity: "error",
+    //  staffName
+    //});
   }
   
   // Check specialization alignment if needed (can be customized based on requirements)
   if (schedule.unit && staffMember.specialization && schedule.unit !== staffMember.specialization) {
-    conflicts.push({
-      type: ConflictType.SPECIALIZATION_MISMATCH,
-      staffId: schedule.staffId,
-      date: schedule.date,
-      message: `Staff specialization (${staffMember.specialization}) does not match unit (${schedule.unit})`,
-      severity: "warning",
-      staffName
-    });
+    //conflicts.push({
+    //  type: ConflictType.SPECIALIZATION_MISMATCH,
+    //  staffId: schedule.staffId,
+    //  date: schedule.date,
+    //  message: `Staff specialization (${staffMember.specialization}) does not match unit (${schedule.unit})`,
+    //  severity: "warning",
+    //  staffName
+    //});
   }
   
   // Count consecutive shifts

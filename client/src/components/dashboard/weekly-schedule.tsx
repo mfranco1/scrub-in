@@ -23,9 +23,9 @@ import {
   getWeekdayName
 } from "@/lib/format-date";
 import { useToast } from "@/hooks/use-toast";
-import { ScheduleWithDetails, InsertSchedule } from "@shared/schema";
+import { ScheduleWithDetails, InsertSchedule, StaffWithUser } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { generateSchedule, ScheduleConflict } from "@/lib/scheduling-algorithm";
+import { generateSchedule, ScheduleConflict } from "@/lib/enhanced-scheduling-algorithm";
 import { ConflictViewer } from "@/components/schedule/conflict-viewer";
 import { ScheduleEditor } from "@/components/schedule/schedule-editor";
 
@@ -60,7 +60,7 @@ export function WeeklySchedule({
   } = useQuery<ScheduleWithDetails[]>({
     queryKey: ["/api/schedule", { startDate, endDate }],
     queryFn: async ({ queryKey }) => {
-      const [_, params] = queryKey;
+      const [_, params] = queryKey as [string, { startDate: string; endDate: string }];
       const res = await fetch(
         `/api/schedule?startDate=${params.startDate}&endDate=${params.endDate}`,
         { credentials: "include" }
@@ -115,7 +115,7 @@ export function WeeklySchedule({
   } = useQuery({
     queryKey: ["/api/availability", { startDate, endDate }],
     queryFn: async ({ queryKey }) => {
-      const [_, params] = queryKey;
+      const [_, params] = queryKey as [string, { startDate: string; endDate: string }];
       const res = await fetch(
         `/api/availability?startDate=${params.startDate}&endDate=${params.endDate}`,
         { credentials: "include" }
@@ -243,7 +243,7 @@ export function WeeklySchedule({
         toast({
           title: "Schedule has conflicts",
           description: `${criticalConflicts.length} critical conflicts detected. Review before saving.`,
-          variant: "warning"
+          variant: "default"
         });
         
         setIsGeneratingSchedule(false);
@@ -568,102 +568,110 @@ export function WeeklySchedule({
                     </tr>
                   ))
                 ) : (
-                  staff?.map((staffMember) => (
-                    <tr key={staffMember.id} className="hover:bg-slate-50">
-                      <td className="py-3 px-4 text-sm text-slate-900 border-r border-slate-200 sticky left-0 bg-white whitespace-nowrap z-10">
-                        <div className="flex items-center">
-                          <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-medium mr-2">
-                            {getInitials(staffMember.user.firstName, staffMember.user.lastName)}
+                  staff?.map((staffMember: StaffWithUser) => {
+                    const staffSchedules = schedules?.filter(
+                      (s) => s.staffId === staffMember.id
+                    ) || [];
+                    
+                    return (
+                      <tr key={staffMember.id} className="hover:bg-slate-50">
+                        <td className="py-3 px-4 text-sm text-slate-900 border-r border-slate-200 sticky left-0 bg-white whitespace-nowrap z-10">
+                          <div className="flex items-center">
+                            <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-medium mr-2">
+                              {getInitials(staffMember.user.firstName, staffMember.user.lastName)}
+                            </div>
+                            <div>
+                              <p className="font-medium">{staffMember.user.firstName} {staffMember.user.lastName}</p>
+                              <p className="text-xs text-slate-500">{staffMember.role}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium">{staffMember.user.firstName} {staffMember.user.lastName}</p>
-                            <p className="text-xs text-slate-500">{staffMember.role}</p>
-                          </div>
-                        </div>
-                      </td>
-                      {days.map((day) => {
-                        const schedule = schedules ? findScheduleForStaffOnDate(staffMember.id, day.date, schedules) : undefined;
-                        
-                        // Check if this cell has a conflict
-                        const conflict = scheduleConflicts.find(
-                          c => c.staffId === staffMember.id && c.date === day.date
-                        );
-                        
-                        let cellClass = getCellClasses(schedule);
-                        if (conflict) {
-                          cellClass += conflict.severity === "error" 
-                            ? " conflict-error conflict-error-pulse" 
-                            : " conflict-warning conflict-warning-pulse";
-                        }
-                        
-                        return (
-                          <td key={day.date} className="py-2 px-1 text-sm text-slate-900">
-                            <div 
-                              className="has-tooltip cursor-pointer"
-                              onClick={() => handleEditSchedule(staffMember.id, day.date, schedule)}
-                            >
-                              <div className={`${cellClass} schedule-cell`}>
-                                {schedule?.shiftType ? (
-                                  <>
-                                    <p className="text-xs font-medium">{schedule.shiftType.name}</p>
-                                    <p className="text-xs font-mono">
-                                      {schedule.shiftType.startTime} - {schedule.shiftType.endTime}
-                                    </p>
-                                  </>
-                                ) : (
-                                  <>
-                                    <p className="text-xs font-medium">Off</p>
-                                    <p className="text-xs font-mono">{schedule?.dutyType.name}</p>
-                                  </>
-                                )}
-                              </div>
-                              <div className="tooltip rounded shadow-lg p-2 bg-black bg-opacity-80 text-white text-xs -mt-14 ml-8 w-48">
-                                {conflict ? (
-                                  <div className="text-xs">
-                                    <div className={conflict.severity === "error" ? "text-red-300" : "text-amber-300"}>
-                                      <p className="font-medium">
-                                        {conflict.severity === "error" ? "Conflict Error:" : "Conflict Warning:"}
+                        </td>
+                        {days.map((day) => {
+                          const schedule = staffSchedules.find(
+                            s => s.date === day.date
+                          );
+                          
+                          // Check if this cell has a conflict
+                          const conflict = scheduleConflicts.find(
+                            c => c.staffId === staffMember.id && c.date === day.date
+                          );
+                          
+                          let cellClass = getCellClasses(schedule);
+                          if (conflict) {
+                            cellClass += conflict.severity === "error" 
+                              ? " conflict-error conflict-error-pulse" 
+                              : " conflict-warning conflict-warning-pulse";
+                          }
+                          
+                          return (
+                            <td key={day.date} className="py-2 px-1 text-sm text-slate-900">
+                              <div 
+                                className="has-tooltip cursor-pointer"
+                                onClick={() => handleEditSchedule(staffMember.id, day.date, schedule)}
+                              >
+                                <div className={`${cellClass} schedule-cell`}>
+                                  {schedule?.shiftType ? (
+                                    <>
+                                      <p className="text-xs font-medium">{schedule.shiftType.name}</p>
+                                      <p className="text-xs font-mono">
+                                        {schedule.shiftType.startTime} - {schedule.shiftType.endTime}
                                       </p>
-                                      <p>{conflict.message}</p>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <p className="text-xs font-medium">Off</p>
+                                      <p className="text-xs font-mono">{schedule?.dutyType.name}</p>
+                                    </>
+                                  )}
+                                </div>
+                                <div className="tooltip rounded shadow-lg p-2 bg-black bg-opacity-80 text-white text-xs -mt-14 ml-8 w-48">
+                                  {conflict ? (
+                                    <div className="text-xs">
+                                      <div className={conflict.severity === "error" ? "text-red-300" : "text-amber-300"}>
+                                        <p className="font-medium">
+                                          {conflict.severity === "error" ? "Conflict Error:" : "Conflict Warning:"}
+                                        </p>
+                                        <p>{conflict.message}</p>
+                                      </div>
+                                      <div className="border-t border-gray-600 mt-1 pt-1">
+                                        {schedule?.shiftType ? (
+                                          <>
+                                            <p className="font-medium">{schedule.shiftType.name} ({schedule.dutyType.name})</p>
+                                            <p>{schedule.shiftType.startTime} - {schedule.shiftType.endTime}</p>
+                                          </>
+                                        ) : schedule ? (
+                                          <p className="font-medium">{schedule.dutyType.name} Rest</p>
+                                        ) : (
+                                          <p className="font-medium">No schedule</p>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div className="border-t border-gray-600 mt-1 pt-1">
+                                  ) : (
+                                    <>
                                       {schedule?.shiftType ? (
                                         <>
                                           <p className="font-medium">{schedule.shiftType.name} ({schedule.dutyType.name})</p>
                                           <p>{schedule.shiftType.startTime} - {schedule.shiftType.endTime}</p>
+                                          <p>{schedule.unit || "General"}</p>
                                         </>
                                       ) : schedule ? (
-                                        <p className="font-medium">{schedule.dutyType.name} Rest</p>
+                                        <>
+                                          <p className="font-medium">{schedule.dutyType.name} Rest</p>
+                                          <p>Not scheduled</p>
+                                        </>
                                       ) : (
-                                        <p className="font-medium">No schedule</p>
+                                        <p className="font-medium">Click to assign shift</p>
                                       )}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <>
-                                    {schedule?.shiftType ? (
-                                      <>
-                                        <p className="font-medium">{schedule.shiftType.name} ({schedule.dutyType.name})</p>
-                                        <p>{schedule.shiftType.startTime} - {schedule.shiftType.endTime}</p>
-                                        <p>{schedule.unit || "General"}</p>
-                                      </>
-                                    ) : schedule ? (
-                                      <>
-                                        <p className="font-medium">{schedule.dutyType.name} Rest</p>
-                                        <p>Not scheduled</p>
-                                      </>
-                                    ) : (
-                                      <p className="font-medium">Click to assign shift</p>
-                                    )}
-                                  </>
-                                )}
+                                    </>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
