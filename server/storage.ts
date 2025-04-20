@@ -14,7 +14,7 @@ const MemoryStore = createMemoryStore(session);
 // Storage interface
 export interface IStorage {
   // Session store
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
   
   // User methods
   getUser(id: number): Promise<User | undefined>;
@@ -50,6 +50,7 @@ export interface IStorage {
   updateSchedule(id: number, schedule: Partial<InsertSchedule>): Promise<Schedule | undefined>;
   deleteSchedule(id: number): Promise<boolean>;
   getScheduleByStaffAndDate(staffId: number, date: string): Promise<Schedule | undefined>;
+  deleteSchedulesByDateRange(startDate: string, endDate: string): Promise<number>;
   
   // Availability methods
   getAvailability(id: number): Promise<Availability | undefined>;
@@ -90,7 +91,7 @@ export class MemStorage implements IStorage {
   private changeHistoryMap: Map<number, ChangeHistory>;
   private notificationsMap: Map<number, Notification>;
   
-  sessionStore: session.SessionStore;
+  sessionStore: session.Store;
   
   private userIdCounter: number;
   private staffIdCounter: number;
@@ -171,7 +172,7 @@ export class MemStorage implements IStorage {
   
   async createUser(userData: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
-    const user: User = { ...userData, id };
+    const user: User = { ...userData, id, isActive: userData.isActive ?? true };
     this.usersMap.set(id, user);
     return user;
   }
@@ -217,7 +218,13 @@ export class MemStorage implements IStorage {
   
   async createStaff(staffData: InsertStaff): Promise<Staff> {
     const id = this.staffIdCounter++;
-    const staff: Staff = { ...staffData, id };
+    const staff: Staff = { 
+      ...staffData, 
+      id, 
+      isActive: staffData.isActive ?? true,
+      specialization: staffData.specialization ?? null,
+      contactInfo: staffData.contactInfo ?? null,
+    };
     this.staffMap.set(id, staff);
     return staff;
   }
@@ -301,7 +308,7 @@ export class MemStorage implements IStorage {
       const staffWithUser = await this.getStaffWithUser(schedule.staffId);
       if (!staffWithUser) continue;
       
-      const shiftType = schedule.shiftTypeId ? await this.getShiftType(schedule.shiftTypeId) : null;
+      const shiftType = schedule.shiftTypeId ? (await this.getShiftType(schedule.shiftTypeId)) || null : null;
       const dutyType = await this.getDutyType(schedule.dutyTypeId);
       
       if (!dutyType) continue;
@@ -319,7 +326,12 @@ export class MemStorage implements IStorage {
   
   async createSchedule(scheduleData: InsertSchedule): Promise<Schedule> {
     const id = this.scheduleIdCounter++;
-    const schedule: Schedule = { ...scheduleData, id };
+    const schedule: Schedule = { 
+      ...scheduleData, 
+      id, 
+      shiftTypeId: scheduleData.shiftTypeId ?? null,
+      unit: scheduleData.unit ?? null,
+    };
     this.schedulesMap.set(id, schedule);
     return schedule;
   }
@@ -342,6 +354,26 @@ export class MemStorage implements IStorage {
       .find(schedule => schedule.staffId === staffId && schedule.date === date);
   }
   
+  // Add implementation for deleteSchedulesByDateRange
+  async deleteSchedulesByDateRange(startDate: string, endDate: string): Promise<number> {
+    let deletedCount = 0;
+    const idsToDelete: number[] = [];
+
+    for (const [id, schedule] of Array.from(this.schedulesMap.entries())) {
+      if (schedule.date >= startDate && schedule.date <= endDate) {
+        idsToDelete.push(id);
+      }
+    }
+
+    for (const id of idsToDelete) {
+      if (this.schedulesMap.delete(id)) {
+        deletedCount++;
+      }
+    }
+    
+    return deletedCount;
+  }
+  
   // Availability methods
   async getAvailability(id: number): Promise<Availability | undefined> {
     return this.availabilityMap.get(id);
@@ -359,7 +391,12 @@ export class MemStorage implements IStorage {
   
   async createAvailability(availabilityData: InsertAvailability): Promise<Availability> {
     const id = this.availabilityIdCounter++;
-    const availability: Availability = { ...availabilityData, id };
+    const availability: Availability = { 
+      ...availabilityData, 
+      id, 
+      isAvailable: availabilityData.isAvailable ?? true,
+      reason: availabilityData.reason ?? null,
+    };
     this.availabilityMap.set(id, availability);
     return availability;
   }
@@ -415,6 +452,7 @@ export class MemStorage implements IStorage {
     const swapRequest: SwapRequest = { 
       ...swapRequestData, 
       id, 
+      status: swapRequestData.status ?? "pending", 
       requestTimestamp: new Date() 
     };
     this.swapRequestsMap.set(id, swapRequest);
@@ -445,6 +483,9 @@ export class MemStorage implements IStorage {
     const changeHistory: ChangeHistory = { 
       ...changeHistoryData, 
       id, 
+      reason: changeHistoryData.reason ?? null,
+      oldShiftTypeId: changeHistoryData.oldShiftTypeId ?? null,
+      newShiftTypeId: changeHistoryData.newShiftTypeId ?? null,
       changeTimestamp: new Date() 
     };
     this.changeHistoryMap.set(id, changeHistory);
@@ -475,6 +516,8 @@ export class MemStorage implements IStorage {
     const notification: Notification = { 
       ...notificationData, 
       id, 
+      staffId: notificationData.staffId ?? null,
+      isRead: notificationData.isRead ?? false,
       createdAt: new Date() 
     };
     this.notificationsMap.set(id, notification);

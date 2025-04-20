@@ -296,6 +296,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Clear schedules for a date range
+  app.delete("/api/schedule/clear", async (req, res) => {
+    const dateRangeSchema = z.object({
+      startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid start date format (YYYY-MM-DD)"),
+      endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid end date format (YYYY-MM-DD)"),
+    });
+
+    try {
+      const { startDate, endDate } = dateRangeSchema.parse(req.query);
+      
+      // Assuming storage.deleteSchedulesByDateRange returns the count of deleted items or throws
+      const deletedCount = await storage.deleteSchedulesByDateRange(startDate, endDate);
+      
+      console.log(`Cleared ${deletedCount} schedules between ${startDate} and ${endDate}`);
+      res.status(204).send(); // Success, no content to return
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid date range query parameters", details: error.errors });
+      }
+      console.error("Error clearing schedules:", error);
+      res.status(500).json({ error: "Failed to clear schedules" });
+    }
+  });
+
   // Availability routes
   app.get("/api/staff/:id/availability", async (req, res) => {
     try {

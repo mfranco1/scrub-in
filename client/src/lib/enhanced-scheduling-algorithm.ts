@@ -533,14 +533,14 @@ export function generateSchedule({
       if (staffLoad.lastShiftType && dayShiftId && 
           staffLoad.lastShiftType === dayShiftId && 
           staffLoad.lastShiftDate === getPreviousDay(date)) {
-        conflicts.push({
-          type: ConflictType.REST_PERIOD_VIOLATION,
-          staffId: staffMember.id,
-          date,
-          message: `Insufficient rest period between day and night shift`,
-          severity: "error",
-          staffName: `${staffMember.user.firstName} ${staffMember.user.lastName}`
-        });
+        //conflicts.push({
+        //  type: ConflictType.REST_PERIOD_VIOLATION,
+        //  staffId: staffMember.id,
+        //  date,
+        //  message: `Insufficient rest period between day and night shift`,
+        //  severity: "error",
+        //  staffName: `${staffMember.user.firstName} ${staffMember.user.lastName}`
+        //});
         hasConflict = true;
         nightShiftIndex++;
         continue; // Skip this assignment, it's a hard constraint

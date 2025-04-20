@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, AlertTriangle, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, AlertTriangle, Plus, Trash2 } from "lucide-react";
 import { 
   Card, 
   CardHeader, 
@@ -28,6 +28,17 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { generateSchedule, ScheduleConflict } from "@/lib/enhanced-scheduling-algorithm";
 import { ConflictViewer } from "@/components/schedule/conflict-viewer";
 import { ScheduleEditor } from "@/components/schedule/schedule-editor";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 function findScheduleForStaffOnDate(
   staffId: number, 
@@ -44,7 +55,7 @@ interface WeeklyScheduleProps {
 }
 
 export function WeeklySchedule({ 
-  scheduleView = "weekly" 
+  scheduleView = "weekly",
 }: WeeklyScheduleProps) {
   const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -200,6 +211,7 @@ export function WeeklySchedule({
   const [scheduleConflicts, setScheduleConflicts] = useState<ReturnType<typeof generateSchedule>['conflicts']>([]);
   const [isShowingConflicts, setIsShowingConflicts] = useState(false);
   const [isGeneratingSchedule, setIsGeneratingSchedule] = useState(false);
+  const [isClearingShifts, setIsClearingShifts] = useState(false);
   
   // State for schedule editing
   const [isEditingSchedule, setIsEditingSchedule] = useState(false);
@@ -330,6 +342,41 @@ export function WeeklySchedule({
         description: "An error occurred while saving the schedule",
         variant: "destructive"
       });
+    }
+  };
+  
+  // Function to handle clearing all shifts for the current week with confirmation
+  const confirmClearAllShifts = async () => {
+    setIsClearingShifts(true);
+    try {
+      const response = await apiRequest(
+        "DELETE", 
+        `/api/schedule/clear?startDate=${startDate}&endDate=${endDate}`
+      );
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "All shifts for the current week have been cleared.",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/schedule"] });
+        setScheduleConflicts([]); // Clear any displayed conflicts
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to clear shifts for the week.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error clearing shifts:", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while clearing shifts.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsClearingShifts(false);
     }
   };
   
@@ -498,19 +545,40 @@ export function WeeklySchedule({
               size="sm"
               onClick={handleGenerateSchedule}
               className="hidden md:flex items-center gap-1"
-              disabled={isGeneratingSchedule}
+              disabled={isGeneratingSchedule || isLoading}
             >
-              {isGeneratingSchedule ? (
-                <>
-                  <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-1"></span>
-                  Generating...
-                </>
-              ) : (
-                <>Generate Schedule</>
-              )}
+              {isGeneratingSchedule ? "Generating..." : "Generate Schedule"}
             </Button>
             
-            {/* Show conflicts button if we have conflicts detected */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="hidden md:flex items-center gap-1"
+                  disabled={isLoadingSchedules || isClearingShifts}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {isClearingShifts ? "Clearing..." : "Clear All"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete all 
+                    schedule assignments for the week of {formatDateForDisplay(new Date(startDate))} - {formatDateForDisplay(new Date(endDate))}.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={confirmClearAllShifts} disabled={isClearingShifts}>
+                    {isClearingShifts ? "Clearing..." : "Yes, clear shifts"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            
             {scheduleConflicts.length > 0 && (
               <Button
                 variant="outline"
